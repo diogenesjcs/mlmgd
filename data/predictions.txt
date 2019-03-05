@@ -1,0 +1,88 @@
+select
+	gph."gameId",
+	gph.id,
+	date(gph.date),
+	value,
+	coalesce(game.rating,0) as rating,
+	gph."storeId",
+	date(game.release_date) as releaseDate,
+	(
+		select min(value)
+	from
+		game_price_history as gph2
+	where
+		gph2."gameId" = gph."gameId"
+		and gph2."currencyId" = 1
+		and gph2."storeId" = gph."storeId") as minvalue,
+	(
+		select max(value)
+	from
+		game_price_history as gph2
+	where
+		gph2."gameId" = gph."gameId"
+		and gph2."currencyId" = 1
+		and gph2."storeId" = gph."storeId") as maxvalue,
+	coalesce((
+		select date(gph2.date)
+	from
+		game_price_history as gph2
+	where
+		gph2."gameId" = gph."gameId"
+		and gph2."currencyId" = 1
+		and gph2."storeId" = gph."storeId"
+		and gph2.id=gph.id-1),date(gph.date)) as beforedate,
+	coalesce((
+		select value
+	from
+		game_price_history as gph2
+	where
+		gph2."gameId" = gph."gameId"
+		and gph2."currencyId" = 1
+		and gph2."storeId" = gph."storeId"
+		and gph2.id=gph.id-1),value) as beforevalue,
+	(
+		select date(gph2.date)
+	from
+		game_price_history as gph2
+	where
+		gph2."gameId" = gph."gameId"
+		and gph2."currencyId" = 1
+		and gph2."storeId" = gph."storeId"
+		and gph2.id=gph.id+1) as nextdate,
+	(
+		select value
+	from
+		game_price_history as gph2
+	where
+		gph2."gameId" = gph."gameId"
+		and gph2."currencyId" = 1
+		and gph2."storeId" = gph."storeId"
+		and gph2.id=gph.id+1) as nextvalue
+	
+from
+	game_price_history as gph
+inner join game on
+	game.id = gph."gameId"
+where
+	gph."currencyId" = 1
+	and game.release_date is not null
+	and (
+		select value
+	from
+		game_price_history as gph2
+	where
+		gph2."gameId" = gph."gameId"
+		and gph2."currencyId" = 1
+		and gph2."storeId" = gph."storeId"
+		and gph2.id=gph.id+1) is not null
+	and (
+		select date(gph2.date)
+	from
+		game_price_history as gph2
+	where
+		gph2."gameId" = gph."gameId"
+		and gph2."currencyId" = 1
+		and gph2."storeId" = gph."storeId"
+		and gph2.id=gph.id+1) is not null
+order by
+	gph.date
